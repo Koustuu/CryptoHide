@@ -134,7 +134,7 @@ const getBinaryString = (message: string): string => {
  */
 export const encodeAudio = async (audioFile: File, message: string, password: string): Promise<Blob> => {
   console.log('encodeAudio: Starting encoding for file:', audioFile.name, 'size:', audioFile.size);
-  const encryptedMessage = encryptMessage(message, password);
+  const encryptedMessage = encryptMessage("STEG" + message, password);
   console.log('encodeAudio: Encrypted message length:', encryptedMessage.length);
   const binaryMessage = getBinaryString(encryptedMessage + '###');
   console.log('encodeAudio: Binary message length:', binaryMessage.length);
@@ -191,9 +191,9 @@ export const decodeAudio = async (audioFile: File, password: string): Promise<st
 
   const encryptedMessage = decodedChars.join('').replace('###', '');
 
-  try {
-    return decryptMessage(encryptedMessage, password);
-  } catch (error) {
+  const decrypted = decryptMessage(encryptedMessage, password);
+  if (!decrypted.startsWith("STEG")) {
     throw new Error('Incorrect password or corrupted file!');
   }
+  return decrypted.substring(4);
 };

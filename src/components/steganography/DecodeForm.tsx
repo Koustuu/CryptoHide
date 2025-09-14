@@ -159,7 +159,12 @@ const DecodeForm: React.FC = () => {
             setDecodeSuccess('Successfully extracted hidden message!');
             setDecodeError(null);
           } catch (error: any) {
-            setDecodeError(error.message || 'Failed to decode message from audio.');
+            // Customize error message for wrong password
+            if (error.message && error.message.toLowerCase().includes('incorrect password')) {
+              setDecodeError('Wrong password, could not extract the hidden message');
+            } else {
+              setDecodeError(error.message || 'Failed to decode message from audio.');
+            }
             setDecodeSuccess(null);
           }
         } else if (selectedType === 'image' && fileObject) {
