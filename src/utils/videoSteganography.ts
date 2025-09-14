@@ -1,209 +1,131 @@
-import { encryptMessage, decryptMessage } from './videoCryptoUtils.js';
-import { MESSAGE_DELIMITER } from './constants.js';
-import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile, toBlobURL } from '@ffmpeg/util';
-
-// Convert string or Uint8Array to binary string
-export function stringToBinary(data: Uint8Array | string): string {
-  if (typeof data === 'string') {
-    return Array.from(data).map(char => char.charCodeAt(0).toString(2).padStart(8, '0')).join('');
-  } else {
-    return Array.from(data).map(byte => byte.toString(2).padStart(8, '0')).join('');
-  }
+// --- Web Crypto API Key Derivation and Encryption/Decryption ---
+async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
+  const enc = new TextEncoder();
+  const passwordKey = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(password),
+    "PBKDF2",
+    false,
+    ["deriveBits", "deriveKey"]
+  );
+  return crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: salt,
+      iterations: 100000,
+      hash: "SHA-256",
+    },
+    passwordKey,
+    { name: "AES-CBC", length: 128 },
+    true,
+    ["encrypt", "decrypt"]
+  );
 }
 
-// Convert binary string to Uint8Array
-export function binaryToBytes(binaryString: string): Uint8Array {
-  const bytes = [];
-  for (let i = 0; i < binaryString.length; i += 8) {
-    const byte = binaryString.slice(i, i + 8);
-    if (byte.length === 8) {
-      bytes.push(parseInt(byte, 2));
-    }
-  }
-  return new Uint8Array(bytes);
+async function encryptMessage(message: string, password: string): Promise<{
+  iv: Uint8Array;
+  salt: Uint8Array;
+  encryptedData: Uint8Array;
+}> {
+  const enc = new TextEncoder();
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(16));
+  const key = await deriveKey(password, salt);
+
+  const encryptedData = await crypto.subtle.encrypt(
+    { name: "AES-CBC", iv: iv },
+    key,
+    enc.encode(message)
+  );
+  return {
+    iv: iv,
+    salt: salt,
+    encryptedData: new Uint8Array(encryptedData)
+  };
 }
 
-// Encode message into video using LSB steganography
+async function decryptMessage(encryptedMessage: Uint8Array, iv: Uint8Array, salt: Uint8Array, password: string): Promise<string> {
+  const key = await deriveKey(password, salt);
+  const decryptedData = await crypto.subtle.decrypt(
+    { name: "AES-CBC", iv: iv },
+    key,
+    encryptedMessage
+  );
+  return new TextDecoder().decode(decryptedData);
+}
+
+// --- Steganography Logic ---
+const SEPARATOR = new TextEncoder().encode('---STEGANOGRAPHY-DATA-START---');
+
+// Encode Process
 export async function encodeVideo(videoFile: File, message: string, password: string): Promise<Blob | null> {
   try {
+    // Read video data
+    const videoBuffer = await videoFile.arrayBuffer();
+    const videoData = new Uint8Array(videoBuffer);
+
     // Encrypt message
-    const { encryptedMessage, salt } = await encryptMessage(message, password);
+    const { iv, salt, encryptedData } = await encryptMessage(message, password);
 
-    // Combine salt length, salt, encrypted message, and delimiter into binary string
-    const saltLengthBinary = salt.length.toString(2).padStart(16, '0');
-    const binaryDataToHide = saltLengthBinary + stringToBinary(salt) + stringToBinary(encryptedMessage) + stringToBinary(MESSAGE_DELIMITER);
+    // Create the final data block
+    const encodedData = new Uint8Array(videoData.length + SEPARATOR.length + iv.length + salt.length + encryptedData.length);
 
-    // Create video element to process the file
-    const video = document.createElement('video');
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
+    encodedData.set(videoData, 0);
+    encodedData.set(SEPARATOR, videoData.length);
+    encodedData.set(iv, videoData.length + SEPARATOR.length);
+    encodedData.set(salt, videoData.length + SEPARATOR.length + iv.length);
+    encodedData.set(encryptedData, videoData.length + SEPARATOR.length + iv.length + salt.length);
 
-    if (!ctx) {
-      throw new Error('Could not create canvas context');
-    }
-
-    return new Promise((resolve) => {
-      video.onloadeddata = () => {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-
-        // Seek to first frame
-        video.currentTime = 0;
-      };
-
-      video.onseeked = async () => {
-        // Draw first frame to canvas
-        ctx.drawImage(video, 0, 0);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-        // Embed binary data in LSB of image data
-        const data = imageData.data;
-        let binaryIndex = 0;
-
-        for (let i = 0; i < data.length && binaryIndex < binaryDataToHide.length; i += 4) {
-          for (let j = 0; j < 3; j++) { // RGB channels only
-            if (binaryIndex < binaryDataToHide.length) {
-              // Clear LSB and set it to binary data bit
-              data[i + j] = (data[i + j] & 0xFE) | parseInt(binaryDataToHide[binaryIndex]);
-              binaryIndex++;
-            }
-          }
-        }
-
-        // Put modified image data back
-        ctx.putImageData(imageData, 0, 0);
-
-        // Convert to PNG blob
-        canvas.toBlob(async (pngBlob) => {
-          if (!pngBlob) {
-            resolve(null);
-            return;
-          }
-
-          // Use ffmpeg.wasm to create AVI video from the PNG frame
-          const ffmpeg = new FFmpeg();
-          ffmpeg.on('log', ({ message }) => {
-            console.log(message);
-          });
-
-          // Load ffmpeg
-          await ffmpeg.load({
-            coreURL: await toBlobURL('/node_modules/@ffmpeg/core/dist/umd/ffmpeg-core.js', 'text/javascript'),
-            wasmURL: await toBlobURL('/node_modules/@ffmpeg/core/dist/umd/ffmpeg-core.wasm', 'application/wasm'),
-          });
-
-          // Write input PNG to ffmpeg
-          await ffmpeg.writeFile('input.png', await fetchFile(pngBlob));
-
-          // Run ffmpeg command to create AVI video
-          await ffmpeg.exec([
-            '-i', 'input.png',
-            '-c:v', 'libx264',
-            '-t', '5', // 5 seconds duration
-            '-pix_fmt', 'yuv420p',
-            '-f', 'avi',
-            'output.avi'
-          ]);
-
-          // Read output AVI
-          const outputData = await ffmpeg.readFile('output.avi');
-          const aviBlob = new Blob([outputData as any], { type: 'video/avi' });
-
-          resolve(aviBlob);
-        }, 'image/png');
-      };
-
-      // Load video file
-      const url = URL.createObjectURL(videoFile);
-      video.src = url;
-      video.load();
-    });
+    const blob = new Blob([encodedData], { type: 'video/mp4' });
+    return blob;
   } catch (error) {
     console.error('Video encoding failed:', error);
-    return null;
+    throw new Error(`An error occurred during encoding: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
-// Decode message from video using LSB steganography
+// Decode Process
 export async function decodeVideo(videoFile: File, password: string): Promise<string | null> {
   try {
-    // Create video element to process the file
-    const video = document.createElement('video');
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
+    // Read video data
+    const videoBuffer = await videoFile.arrayBuffer();
+    const videoData = new Uint8Array(videoBuffer);
 
-    if (!ctx) {
-      throw new Error('Could not create canvas context');
+    // Find separator
+    let separatorIndex = -1;
+    for (let i = videoData.length - SEPARATOR.length; i >= 0; i--) {
+      let match = true;
+      for (let j = 0; j < SEPARATOR.length; j++) {
+        if (videoData[i + j] !== SEPARATOR[j]) {
+          match = false;
+          break;
+        }
+      }
+      if (match) {
+        separatorIndex = i;
+        break;
+      }
     }
 
-    return new Promise((resolve) => {
-      video.onloadeddata = () => {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+    if (separatorIndex === -1) {
+      throw new Error('No hidden message found in this video file.');
+    }
 
-        // Seek to first frame
-        video.currentTime = 0;
-      };
+    // Extract data
+    const hiddenDataBlock = videoData.subarray(separatorIndex + SEPARATOR.length);
+    const iv = hiddenDataBlock.subarray(0, 16);
+    const salt = hiddenDataBlock.subarray(16, 32);
+    const encryptedData = hiddenDataBlock.subarray(32);
 
-      video.onseeked = async () => {
-        // Draw first frame to canvas
-        ctx.drawImage(video, 0, 0);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const decryptedMessage = await decryptMessage(encryptedData, iv, salt, password);
+    return decryptedMessage;
 
-        // Extract binary data from LSB of image data
-        const data = imageData.data;
-        let binaryString = '';
-
-        for (let i = 0; i < data.length; i += 4) {
-          for (let j = 0; j < 3; j++) { // RGB channels only
-            binaryString += (data[i + j] & 1).toString();
-          }
-        }
-
-        // Parse the salt and encrypted message
-        // The first 16 bits are the salt length
-        if (binaryString.length < 16) {
-          console.error("Error: Binary data is too short to contain salt length.");
-          resolve("Error: Could not extract salt length from video data.");
-          return;
-        }
-
-        const saltLengthBinary = binaryString.slice(0, 16);
-        const saltLength = parseInt(saltLengthBinary, 2);
-
-        // The next 'saltLength' bits are the salt
-        const saltBinary = binaryString.slice(16, 16 + saltLength * 8); // Salt length is in bytes, convert to bits
-        if (saltBinary.length !== saltLength * 8) {
-          console.error("Error: Binary data is too short to contain the full salt.");
-          resolve("Error: Could not extract salt from video data.");
-          return;
-        }
-        const salt = binaryToBytes(saltBinary);
-
-        // The remaining bits are the encrypted message
-        const encryptedMessageBinary = binaryString.slice(16 + saltLength * 8);
-        const encryptedMessage = binaryToBytes(encryptedMessageBinary);
-
-        // Attempt to decrypt the message using the extracted salt and provided password
-        const decryptedMessage = await decryptMessage(encryptedMessage, password, salt);
-
-        if (decryptedMessage !== null) {
-          console.log("Decoding and decryption complete. Message found.");
-          resolve(decryptedMessage);
-        } else {
-          // decryptMessage already prints an error message for invalid password
-          resolve("Decryption failed. Please check the password or the video file.");
-        }
-      };
-
-      // Load video file
-      const url = URL.createObjectURL(videoFile);
-      video.src = url;
-      video.load();
-    });
   } catch (error) {
     console.error('Video decoding failed:', error);
-    return null;
+    if (error instanceof DOMException && error.name === 'OperationError') {
+      throw new Error('Invalid password! The hidden message could not be decrypted.');
+    } else {
+      throw new Error(`An error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 }

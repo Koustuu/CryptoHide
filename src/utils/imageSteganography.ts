@@ -3,6 +3,8 @@
  * Ported from Python implementation for browser compatibility
  */
 
+import CryptoJS from 'crypto-js';
+
 // Delimiter to mark the end of the message in the hidden data
 const MESSAGE_DELIMITER = '###END###';
 
@@ -32,14 +34,66 @@ function binaryToString(binaryMessage: string): string {
 }
 
 /**
+ * Generates an encryption key from a password using SHA-256.
+ * @param password - The password to generate key from
+ * @returns The encryption key
+ */
+function getEncryptionKey(password: string): string {
+  return CryptoJS.SHA256(password).toString();
+}
+
+/**
+ * Encrypts a message using AES encryption.
+ * @param message - The message to encrypt
+ * @param password - The password for encryption
+ * @returns The encrypted message
+ */
+function encryptMessage(message: string, password: string): string {
+  try {
+    const key = getEncryptionKey(password);
+    const encrypted = CryptoJS.AES.encrypt(message, key).toString();
+    // Base64 encode for compatibility
+    return CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(encrypted));
+  } catch {
+    throw new Error('Failed to encrypt message');
+  }
+}
+
+/**
+ * Decrypts an encrypted message using AES decryption.
+ * @param encryptedMessage - The encrypted message
+ * @param password - The password for decryption
+ * @returns The decrypted message
+ */
+function decryptMessage(encryptedMessage: string, password: string): string {
+  try {
+    const key = getEncryptionKey(password);
+    // Base64 decode
+    const encryptedData = CryptoJS.enc.Base64.parse(encryptedMessage).toString(CryptoJS.enc.Utf8);
+    const decrypted = CryptoJS.AES.decrypt(encryptedData, key);
+    const decryptedMessage = decrypted.toString(CryptoJS.enc.Utf8);
+
+    if (!decryptedMessage) {
+      throw new Error('Invalid password or corrupted data');
+    }
+
+    return decryptedMessage;
+  } catch {
+    throw new Error('Failed to decrypt message: Invalid password or corrupted data');
+  }
+}
+
+/**
  * Encodes a message into an image using the LSB technique.
  * @param imageData - The original image data
  * @param message - The secret message to hide
+ * @param password - The password for encryption (optional for backward compatibility)
  * @returns Modified image data with hidden message or null if message too large
  */
 export async function encodeImageMessage(
   imageData: ImageData,
-  message: string
+  message: string,
+  password?: string
 ): Promise<ImageData | null> {
   console.log("Encoding message into image...");
 
@@ -47,8 +101,14 @@ export async function encodeImageMessage(
   const height = imageData.height;
   const data = imageData.data;
 
+  // Encrypt the message if password is provided
+  let messageToEncode = message;
+  if (password) {
+    messageToEncode = encryptMessage(message, password);
+  }
+
   // Add delimiter to the end of the message
-  const fullMessage = message + MESSAGE_DELIMITER;
+  const fullMessage = messageToEncode + MESSAGE_DELIMITER;
   const binaryMessage = stringToBinary(fullMessage);
 
   // Check if the image has enough capacity
@@ -92,9 +152,10 @@ export async function encodeImageMessage(
 /**
  * Decodes a message hidden in an image using the LSB technique.
  * @param imageData - The image data potentially containing a hidden message
+ * @param password - The password for decryption (optional for backward compatibility)
  * @returns The hidden message or null if no message found
  */
-export async function decodeImageMessage(imageData: ImageData): Promise<string | null> {
+export async function decodeImageMessage(imageData: ImageData, password?: string): Promise<string | null> {
   console.log("Decoding message from image...");
 
   const data = imageData.data;
@@ -110,9 +171,23 @@ export async function decodeImageMessage(imageData: ImageData): Promise<string |
 
   // Check for delimiter
   if (decodedMessage.includes(MESSAGE_DELIMITER)) {
-    const message = decodedMessage.split(MESSAGE_DELIMITER)[0];
-    console.log("Decoding complete. Message found.");
-    return message;
+    const extractedMessage = decodedMessage.split(MESSAGE_DELIMITER)[0];
+
+    // If password is provided, try to decrypt the message
+    if (password) {
+      try {
+        const decryptedMessage = decryptMessage(extractedMessage, password);
+        console.log("Decoding and decryption complete. Message found.");
+        return decryptedMessage;
+      } catch (error) {
+        console.error('Decryption failed:', error);
+        throw new Error('Decryption failed: Invalid password or corrupted data. Please check your password and try again.');
+      }
+    } else {
+      // No password provided, return the message as-is (for backward compatibility)
+      console.log("Decoding complete. Message found.");
+      return extractedMessage;
+    }
   } else {
     console.log("No message found in the image.");
     return null;

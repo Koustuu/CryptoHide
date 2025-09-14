@@ -24,7 +24,7 @@ export const encodeMessage = async (
   if (type === 'video' && data instanceof File && password) {
     return await encodeVideo(data, message, password);
   } else if (type === 'image' && data instanceof ImageData) {
-    return await encodeImageMessage(data, message);
+    return await encodeImageMessage(data, message, password);
   }
   return null;
 };
@@ -44,7 +44,7 @@ export const decodeMessage = async (
   if (type === 'video' && data instanceof File && password) {
     return await decodeVideo(data, password);
   } else if (type === 'image' && data instanceof ImageData) {
-    return await decodeImageMessage(data);
+    return await decodeImageMessage(data, password);
   }
   return null;
 };

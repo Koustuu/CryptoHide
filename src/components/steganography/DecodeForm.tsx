@@ -187,18 +187,23 @@ const DecodeForm: React.FC = () => {
           }
         } else if (selectedType === 'video' && fileObject) {
           try {
-            // For video steganography, we decode from the encoded PNG frame
+            // For video steganography, we decode from the encoded video file
             const decodedMessage = await decodeMessage(fileObject, password, 'video');
             if (decodedMessage) {
               setDecodedMessage(decodedMessage);
-              setDecodeSuccess('Successfully extracted hidden message from video frame!');
+              setDecodeSuccess('Successfully extracted hidden message from video!');
               setDecodeError(null);
             } else {
-              setDecodeError('No hidden message found in the video frame. Make sure you uploaded the encoded PNG file.');
+              setDecodeError('No hidden message found in the video file.');
               setDecodeSuccess(null);
             }
           } catch (error: any) {
-            setDecodeError(error.message || 'Failed to decode message from video frame.');
+            // Customize error message for wrong password
+            if (error.message && error.message.toLowerCase().includes('invalid password')) {
+              setDecodeError('Wrong password, could not extract the hidden message');
+            } else {
+              setDecodeError(error.message || 'Failed to decode message from video.');
+            }
             setDecodeSuccess(null);
           }
         } else {

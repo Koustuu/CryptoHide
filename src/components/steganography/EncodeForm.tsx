@@ -173,7 +173,7 @@ const EncodeForm: React.FC = () => {
         // Encode message into video file
         const encodedVideoBlob = await encodeMessage(fileObject, message, password, 'video');
         if (!encodedVideoBlob) {
-          setQrError('Video steganography is not yet fully implemented. Please try image steganography.');
+          setQrError('Failed to encode message into video.');
           setIsProcessing(false);
           return;
         }
@@ -181,12 +181,12 @@ const EncodeForm: React.FC = () => {
         const url = URL.createObjectURL(encodedVideoBlob as Blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'encoded_video.avi';
+        a.download = `encoded_${fileObject.name}`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        setQrSuccess('Video encoded successfully! File downloaded.');
+        setQrSuccess('Video encoded successfully! File downloaded. The video length is unchanged.');
       } catch (error: any) {
         console.error('UI: Encoding failed:', error);
         setQrError(error.message || 'Failed to encode message into video.');
