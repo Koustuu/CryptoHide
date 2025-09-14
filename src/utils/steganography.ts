@@ -1,3 +1,6 @@
+import { encodeImageMessage, decodeImageMessage, fileToImageData, imageDataToBlob } from './imageSteganography';
+import { encodeVideo, decodeVideo } from './videoSteganography';
+
 /**
  * Utility functions for steganography operations
  * Note: This is a simplified implementation for demonstration purposes
@@ -5,41 +8,45 @@
  */
 
 /**
- * Embeds a message in an image using LSB (Least Significant Bit) steganography
- * @param imageData - The original image data
+ * Embeds a message in an image or video using LSB (Least Significant Bit) steganography
+ * @param data - The original image data or video file
  * @param message - The message to hide
  * @param password - Optional password for encryption
- * @returns Modified image data with hidden message
+ * @param type - 'image' or 'video'
+ * @returns Modified image data with hidden message or encoded video Blob
  */
 export const encodeMessage = async (
-  imageData: ImageData,
+  data: ImageData | File,
   message: string,
-  password?: string
-): Promise<ImageData> => {
-  // In a real implementation, this would modify the image pixels to hide the message
-  // For demonstration purposes, we're just returning the original image data
-  console.log('Encoding message:', message);
-  console.log('Using password:', password ? 'Yes' : 'No');
-  
-  return imageData;
+  password?: string,
+  type: 'image' | 'video' = 'image'
+): Promise<ImageData | Blob | null> => {
+  if (type === 'video' && data instanceof File && password) {
+    return await encodeVideo(data, message, password);
+  } else if (type === 'image' && data instanceof ImageData) {
+    return await encodeImageMessage(data, message);
+  }
+  return null;
 };
 
 /**
- * Extracts a hidden message from an image
- * @param imageData - The image data potentially containing a hidden message
+ * Extracts a hidden message from an image or video
+ * @param data - The image data or video file potentially containing a hidden message
  * @param password - Optional password for decryption
+ * @param type - 'image' or 'video'
  * @returns The extracted message or null if no message found
  */
 export const decodeMessage = async (
-  imageData: ImageData,
-  password?: string
+  data: ImageData | File,
+  password?: string,
+  type: 'image' | 'video' = 'image'
 ): Promise<string | null> => {
-  // In a real implementation, this would extract the hidden message from the image
-  // For demonstration purposes, we're just returning a mock message
-  console.log('Decoding image data');
-  console.log('Using password:', password ? 'Yes' : 'No');
-  
-  return "This is a hidden message that would be extracted from the image in a real implementation.";
+  if (type === 'video' && data instanceof File && password) {
+    return await decodeVideo(data, password);
+  } else if (type === 'image' && data instanceof ImageData) {
+    return await decodeImageMessage(data);
+  }
+  return null;
 };
 
 /**

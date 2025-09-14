@@ -1,6 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { Upload, X, Lock, FileText, Info, Image, Music, Video, QrCode, AlertCircle, CheckCircle, ExternalLink } from 'lucide-react';
 import { extractEncryptedQR } from '../../utils/qrSteganography';
+import { decodeAudio } from '../../utils/audioSteganography';
+import { decodeMessage } from '../../utils/steganography';
+import { fileToImageData } from '../../utils/imageSteganography';
 
 type StegType = 'image' | 'audio' | 'video' | 'qrcode';
 
@@ -20,7 +23,7 @@ const DecodeForm: React.FC = () => {
   const stegTypes = [
     { id: 'image', name: 'Image Steganography', icon: Image, accept: 'image/*' },
     { id: 'audio', name: 'Audio Steganography', icon: Music, accept: 'audio/*' },
-    { id: 'video', name: 'Video Steganography', icon: Video, accept: 'video/*' },
+    { id: 'video', name: 'Video Steganography', icon: Video, accept: 'video/*,.avi' },
     { id: 'qrcode', name: 'QR Code Steganography', icon: QrCode, accept: 'image/*' },
   ];
 
@@ -148,12 +151,58 @@ const DecodeForm: React.FC = () => {
           setDecodeError(result.error || 'Failed to decode QR code');
         }
       } else {
-        // Simulate decoding process for other steganography types
-        setTimeout(() => {
-          const simulatedMessage = "This is a hidden message that was extracted from the file. In a real application, this would be the actual message hidden using steganography.";
-          setDecodedMessage(simulatedMessage);
-          setDecodeSuccess('Successfully extracted hidden message!');
-        }, 2000);
+        // Handle decoding for other steganography types
+        if (selectedType === 'audio' && fileObject) {
+          try {
+            const decodedMessage = await decodeAudio(fileObject, password);
+            setDecodedMessage(decodedMessage);
+            setDecodeSuccess('Successfully extracted hidden message!');
+            setDecodeError(null);
+          } catch (error: any) {
+            setDecodeError(error.message || 'Failed to decode message from audio.');
+            setDecodeSuccess(null);
+          }
+        } else if (selectedType === 'image' && fileObject) {
+          try {
+            // Convert file to ImageData
+            const imageData = await fileToImageData(fileObject);
+            // Decode message from image data
+            const decodedMessage = await decodeMessage(imageData, password, 'image');
+            if (decodedMessage) {
+              setDecodedMessage(decodedMessage);
+              setDecodeSuccess('Successfully extracted hidden message!');
+              setDecodeError(null);
+            } else {
+              setDecodeError('No hidden message found in the image.');
+              setDecodeSuccess(null);
+            }
+          } catch (error: any) {
+            setDecodeError(error.message || 'Failed to decode message from image.');
+            setDecodeSuccess(null);
+          }
+        } else if (selectedType === 'video' && fileObject) {
+          try {
+            // For video steganography, we decode from the encoded PNG frame
+            const decodedMessage = await decodeMessage(fileObject, password, 'video');
+            if (decodedMessage) {
+              setDecodedMessage(decodedMessage);
+              setDecodeSuccess('Successfully extracted hidden message from video frame!');
+              setDecodeError(null);
+            } else {
+              setDecodeError('No hidden message found in the video frame. Make sure you uploaded the encoded PNG file.');
+              setDecodeSuccess(null);
+            }
+          } catch (error: any) {
+            setDecodeError(error.message || 'Failed to decode message from video frame.');
+            setDecodeSuccess(null);
+          }
+        } else {
+          setTimeout(() => {
+            const simulatedMessage = "This is a hidden message that was extracted from the file. In a real application, this would be the actual message hidden using steganography.";
+            setDecodedMessage(simulatedMessage);
+            setDecodeSuccess('Successfully extracted hidden message!');
+          }, 2000);
+        }
       }
     } catch (error) {
       console.error('Error during decoding:', error);
@@ -355,95 +404,229 @@ const DecodeForm: React.FC = () => {
 
       {(decodedMessage || websiteUrl) && (
         <div className="mt-8 p-6 bg-indigo-900/50 border border-purple-600 rounded-lg">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white flex items-center">
-              <QrCode size={20} className="mr-2 text-purple-400" />
-              Decoded QR Code Results
-            </h3>
-            {fileObject && (
-              <div className="text-sm text-gray-400">
-                From: {fileObject.name}
+          {selectedType === 'qrcode' ? (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white flex items-center">
+                  <QrCode size={20} className="mr-2 text-purple-400" />
+                  Decoded QR Code Results
+                </h3>
+                {fileObject && (
+                  <div className="text-sm text-gray-400">
+                    From: {fileObject.name}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          {websiteUrl && (
-            <div className="mb-4">
-              <h4 className="text-md font-medium text-white mb-2 flex items-center">
-                <ExternalLink size={16} className="mr-2 text-blue-400" />
-                Website URL
-              </h4>
-              <div className="bg-gray-900 p-3 rounded-md">
-                <a
-                  href={websiteUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-300 hover:text-blue-200 underline break-all"
-                >
-                  {websiteUrl}
-                </a>
+              {websiteUrl && (
+                <div className="mb-4">
+                  <h4 className="text-md font-medium text-white mb-2 flex items-center">
+                    <ExternalLink size={16} className="mr-2 text-blue-400" />
+                    Website URL
+                  </h4>
+                  <div className="bg-gray-900 p-3 rounded-md">
+                    <a
+                      href={websiteUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-300 hover:text-blue-200 underline break-all"
+                    >
+                      {websiteUrl}
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {decodedMessage && (
+                <div>
+                  <h4 className="text-md font-medium text-white mb-2 flex items-center">
+                    <FileText size={16} className="mr-2 text-green-400" />
+                    Hidden Message
+                  </h4>
+                  <div className="bg-gray-900 p-4 rounded-md text-gray-300 whitespace-pre-wrap break-words border-l-4 border-green-500">
+                    {decodedMessage}
+                  </div>
+                </div>
+              )}
+
+              {!decodedMessage && websiteUrl && (
+                <div className="p-3 bg-yellow-900/30 border border-yellow-600 rounded-md">
+                  <p className="text-yellow-300 text-sm">
+                    ℹ️ This QR code contains only a website URL. No hidden message was found.
+                  </p>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="mt-6 pt-4 border-t border-purple-700/50">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={() => {
+                      // Clear only the results, keep the file
+                      setDecodedMessage(null);
+                      setWebsiteUrl(null);
+                      setDecodeError(null);
+                      setDecodeSuccess(null);
+                    }}
+                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition duration-200 flex items-center justify-center"
+                  >
+                    <FileText size={16} className="mr-2" />
+                    Decode Again
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Trigger file input click to select a new file
+                      fileInputRef.current?.click();
+                    }}
+                    className="px-4 py-2 bg-purple-700 hover:bg-purple-600 text-white rounded-md transition duration-200 flex items-center justify-center"
+                  >
+                    <Upload size={16} className="mr-2" />
+                    Upload Different QR Code
+                  </button>
+                  <button
+                    onClick={handleRemoveFile}
+                    className="px-4 py-2 bg-red-700 hover:bg-red-600 text-white rounded-md transition duration-200 flex items-center justify-center"
+                  >
+                    <X size={16} className="mr-2" />
+                    Clear All
+                  </button>
+                </div>
+                <p className="text-gray-400 text-xs mt-2">
+                  💡 Your uploaded QR code image remains visible above for reference
+                </p>
               </div>
-            </div>
-          )}
-
-          {decodedMessage && (
-            <div>
-              <h4 className="text-md font-medium text-white mb-2 flex items-center">
-                <FileText size={16} className="mr-2 text-green-400" />
-                Hidden Message
-              </h4>
-              <div className="bg-gray-900 p-4 rounded-md text-gray-300 whitespace-pre-wrap break-words border-l-4 border-green-500">
-                {decodedMessage}
+            </>
+          ) : selectedType === 'image' ? (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white flex items-center">
+                  <Image size={20} className="mr-2 text-purple-400" />
+                  Decoded Image Steganography Results
+                </h3>
+                {fileObject && (
+                  <div className="text-sm text-gray-400">
+                    From: {fileObject.name}
+                  </div>
+                )}
               </div>
-            </div>
-          )}
 
-          {!decodedMessage && websiteUrl && (
-            <div className="p-3 bg-yellow-900/30 border border-yellow-600 rounded-md">
-              <p className="text-yellow-300 text-sm">
-                ℹ️ This QR code contains only a website URL. No hidden message was found.
-              </p>
-            </div>
-          )}
+              {decodedMessage && (
+                <div>
+                  <h4 className="text-md font-medium text-white mb-2 flex items-center">
+                    <FileText size={16} className="mr-2 text-green-400" />
+                    Hidden Message
+                  </h4>
+                  <div className="bg-gray-900 p-4 rounded-md text-gray-300 whitespace-pre-wrap break-words border-l-4 border-green-500">
+                    {decodedMessage}
+                  </div>
+                </div>
+              )}
 
-          {/* Action buttons */}
-          <div className="mt-6 pt-4 border-t border-purple-700/50">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={() => {
-                  // Clear only the results, keep the file
-                  setDecodedMessage(null);
-                  setWebsiteUrl(null);
-                  setDecodeError(null);
-                  setDecodeSuccess(null);
-                }}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition duration-200 flex items-center justify-center"
-              >
-                <FileText size={16} className="mr-2" />
-                Decode Again
-              </button>
-              <button
-                onClick={() => {
-                  // Trigger file input click to select a new file
-                  fileInputRef.current?.click();
-                }}
-                className="px-4 py-2 bg-purple-700 hover:bg-purple-600 text-white rounded-md transition duration-200 flex items-center justify-center"
-              >
-                <Upload size={16} className="mr-2" />
-                Upload Different QR Code
-              </button>
-              <button
-                onClick={handleRemoveFile}
-                className="px-4 py-2 bg-red-700 hover:bg-red-600 text-white rounded-md transition duration-200 flex items-center justify-center"
-              >
-                <X size={16} className="mr-2" />
-                Clear All
-              </button>
-            </div>
-            <p className="text-gray-400 text-xs mt-2">
-              💡 Your uploaded QR code image remains visible above for reference
-            </p>
-          </div>
+              {/* Action buttons */}
+              <div className="mt-6 pt-4 border-t border-purple-700/50">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={() => {
+                      // Clear only the results, keep the file
+                      setDecodedMessage(null);
+                      setWebsiteUrl(null);
+                      setDecodeError(null);
+                      setDecodeSuccess(null);
+                    }}
+                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition duration-200 flex items-center justify-center"
+                  >
+                    <FileText size={16} className="mr-2" />
+                    Decode Again
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Trigger file input click to select a new file
+                      fileInputRef.current?.click();
+                    }}
+                    className="px-4 py-2 bg-purple-700 hover:bg-purple-600 text-white rounded-md transition duration-200 flex items-center justify-center"
+                  >
+                    <Upload size={16} className="mr-2" />
+                    Upload Different Image File
+                  </button>
+                  <button
+                    onClick={handleRemoveFile}
+                    className="px-4 py-2 bg-red-700 hover:bg-red-600 text-white rounded-md transition duration-200 flex items-center justify-center"
+                  >
+                    <X size={16} className="mr-2" />
+                    Clear All
+                  </button>
+                </div>
+                <p className="text-gray-400 text-xs mt-2">
+                  💡 Your uploaded image file remains visible above for reference
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white flex items-center">
+                  <Music size={20} className="mr-2 text-purple-400" />
+                  Decoded Audio Steganography Results
+                </h3>
+                {fileObject && (
+                  <div className="text-sm text-gray-400">
+                    From: {fileObject.name}
+                  </div>
+                )}
+              </div>
+
+              {decodedMessage && (
+                <div>
+                  <h4 className="text-md font-medium text-white mb-2 flex items-center">
+                    <FileText size={16} className="mr-2 text-green-400" />
+                    Hidden Message
+                  </h4>
+                  <div className="bg-gray-900 p-4 rounded-md text-gray-300 whitespace-pre-wrap break-words border-l-4 border-green-500">
+                    {decodedMessage}
+                  </div>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="mt-6 pt-4 border-t border-purple-700/50">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={() => {
+                      // Clear only the results, keep the file
+                      setDecodedMessage(null);
+                      setWebsiteUrl(null);
+                      setDecodeError(null);
+                      setDecodeSuccess(null);
+                    }}
+                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition duration-200 flex items-center justify-center"
+                  >
+                    <FileText size={16} className="mr-2" />
+                    Decode Again
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Trigger file input click to select a new file
+                      fileInputRef.current?.click();
+                    }}
+                    className="px-4 py-2 bg-purple-700 hover:bg-purple-600 text-white rounded-md transition duration-200 flex items-center justify-center"
+                  >
+                    <Upload size={16} className="mr-2" />
+                    Upload Different Audio File
+                  </button>
+                  <button
+                    onClick={handleRemoveFile}
+                    className="px-4 py-2 bg-red-700 hover:bg-red-600 text-white rounded-md transition duration-200 flex items-center justify-center"
+                  >
+                    <X size={16} className="mr-2" />
+                    Clear All
+                  </button>
+                </div>
+                <p className="text-gray-400 text-xs mt-2">
+                  💡 Your uploaded audio file remains visible above for reference
+                </p>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

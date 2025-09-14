@@ -1,0 +1,1 @@
+export const MESSAGE_DELIMITER = '<<END_OF_MESSAGE>>';

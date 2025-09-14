@@ -61,37 +61,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
-    
+
     try {
-      // Simulate API call - replace with actual authentication logic
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // For demo purposes, accept any email/password combination
-      // In production, this would validate against a real backend
-      if (email && password) {
+      const response = await fetch('http://localhost:5000/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: email,
+          password: password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
         const userData: User = {
-          id: `user_${Date.now()}`,
-          email: email,
-          name: email.split('@')[0]
+          id: data.user.id,
+          email: data.user.username,
+          name: data.user.username.split('@')[0]
         };
-        
-        const token = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        
+
         // Store in localStorage
         localStorage.setItem('cryptohide_user', JSON.stringify(userData));
-        localStorage.setItem('cryptohide_token', token);
-        
+        localStorage.setItem('cryptohide_token', data.token);
+
         setUser(userData);
         setIsLoading(false);
-        
+
         return { success: true };
       } else {
         setIsLoading(false);
-        return { success: false, error: 'Invalid email or password' };
+        return { success: false, error: data.message || 'Login failed. Please check your credentials.' };
       }
-    } catch {
+    } catch (error) {
+      console.error('Login error:', error);
       setIsLoading(false);
-      return { success: false, error: 'Login failed. Please try again.' };
+      return { success: false, error: 'Failed to connect to the server. Please ensure the server is running.' };
     }
   };
 

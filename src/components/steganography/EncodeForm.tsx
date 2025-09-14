@@ -1,12 +1,16 @@
 import React, { useState, useRef } from 'react';
 import { Upload, X, Lock, Info, Save, Image, Music, Video, QrCode, AlertCircle, CheckCircle } from 'lucide-react';
 import { createEncryptedQR, downloadQRCode, isValidUrl } from '../../utils/qrSteganography';
+import { encodeAudio } from '../../utils/audioSteganography';
+import { encodeMessage, imageDataToDataURL } from '../../utils/steganography';
+import { fileToImageData, imageDataToBlob } from '../../utils/imageSteganography';
 
 type StegType = 'image' | 'audio' | 'video' | 'qrcode';
 
 const EncodeForm: React.FC = () => {
   const [selectedType, setSelectedType] = useState<StegType | null>(null);
   const [file, setFile] = useState<string | null>(null);
+  const [fileObject, setFileObject] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [message, setMessage] = useState('');
   const [password, setPassword] = useState('');
@@ -52,6 +56,7 @@ const EncodeForm: React.FC = () => {
     const reader = new FileReader();
     reader.onload = () => {
       setFile(reader.result as string);
+      setFileObject(file);
     };
     reader.readAsDataURL(file);
   };
@@ -64,6 +69,7 @@ const EncodeForm: React.FC = () => {
 
   const handleRemoveFile = () => {
     setFile(null);
+    setFileObject(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -100,16 +106,97 @@ const EncodeForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if ((!file && selectedType !== 'qrcode') || !message || !password) return;
-    
+
     setIsProcessing(true);
-    
+    setQrError(null);
+    setQrSuccess(null);
+
     if (selectedType === 'qrcode') {
       await generateEncryptedQRCode();
+    } else if (selectedType === 'audio' && fileObject) {
+      console.log('UI: Starting audio encoding for file:', fileObject.name);
+      if (!fileObject.name.toLowerCase().endsWith('.wav')) {
+        console.error('UI: File is not WAV');
+        setQrError('Please select a WAV audio file for encoding.');
+        setIsProcessing(false);
+        return;
+      }
+      try {
+        console.log('UI: Calling encodeAudio');
+        const encodedBlob = await encodeAudio(fileObject, message, password);
+        console.log('UI: Encoded blob received, size:', encodedBlob.size);
+        const url = URL.createObjectURL(encodedBlob);
+        console.log('UI: Object URL created:', url);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'stego_audio.wav';
+        document.body.appendChild(a);
+        console.log('UI: About to trigger download');
+        a.click();
+        console.log('UI: Download triggered');
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setQrSuccess('Audio encoded successfully! File downloaded.');
+      } catch (error: any) {
+        console.error('UI: Encoding failed:', error);
+        setQrError(error.message || 'Failed to encode message into audio.');
+      }
+    } else if (selectedType === 'image' && fileObject) {
+      try {
+        // Convert file to ImageData
+        const imageData = await fileToImageData(fileObject);
+        // Encode message into image data
+        const encodedImageData = await encodeMessage(imageData, message, password, 'image');
+        if (!encodedImageData) {
+          setQrError('Message is too large to encode in the selected image.');
+          setIsProcessing(false);
+          return;
+        }
+        // Convert encoded ImageData to Blob
+        const blob = await imageDataToBlob(encodedImageData as ImageData);
+        // Create download link
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'encoded_image.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setQrSuccess('Image encoded successfully! File downloaded.');
+      } catch (error: any) {
+        console.error('UI: Encoding failed:', error);
+        setQrError(error.message || 'Failed to encode message into image.');
+      }
+    } else if (selectedType === 'video' && fileObject) {
+      try {
+        // Encode message into video file
+        const encodedVideoBlob = await encodeMessage(fileObject, message, password, 'video');
+        if (!encodedVideoBlob) {
+          setQrError('Video steganography is not yet fully implemented. Please try image steganography.');
+          setIsProcessing(false);
+          return;
+        }
+        // Create download link
+        const url = URL.createObjectURL(encodedVideoBlob as Blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'encoded_video.avi';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setQrSuccess('Video encoded successfully! File downloaded.');
+      } catch (error: any) {
+        console.error('UI: Encoding failed:', error);
+        setQrError(error.message || 'Failed to encode message into video.');
+      }
     } else {
       // Handle other steganography types
       console.log('Processing', selectedType, 'steganography with password');
+      setQrError('This steganography type is not yet implemented.');
     }
-    
+
     setIsProcessing(false);
   };
 
@@ -298,7 +385,7 @@ const EncodeForm: React.FC = () => {
 
             <button
               type="submit"
-              disabled={(!file && selectedType !== 'qrcode') || !message || !password || isProcessing || (selectedType === 'qrcode' && redirectUrl && !isValidUrl(redirectUrl))}
+              disabled={Boolean((!file && selectedType !== 'qrcode') || !message || !password || isProcessing || (selectedType === 'qrcode' && redirectUrl && !isValidUrl(redirectUrl)))}
               className={`w-full flex justify-center items-center py-3 px-4 rounded-md shadow-sm text-white bg-purple-700 hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition duration-200 ${
                 ((!file && selectedType !== 'qrcode') || !message || !password || isProcessing || (selectedType === 'qrcode' && redirectUrl && !isValidUrl(redirectUrl))) ? 'opacity-70 cursor-not-allowed' : ''
               }`}

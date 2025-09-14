@@ -1,49 +1,27 @@
 import React, { useState } from 'react';
 import { LogIn, Mail, Key, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
+  const { login, isLoading } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setIsLoading(true);
 
-    try {
-      const response = await fetch('http://localhost:5000/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: email,
-          password: password,
-        }),
-      });
+    const result = await login(email, password);
 
-      const data = await response.json();
-
-      if (response.ok) {
-        console.log('Login successful:', data.message);
-        // On successful login, you would typically store an auth token here
-        // and then redirect the user to a protected page.
-        navigate('/');
-      } else {
-        console.error('Login failed:', data.message);
-        setError(data.message || 'Login failed. Please check your credentials.');
-      }
-    } catch (err) {
-      console.error('Network error:', err);
-      setError('Failed to connect to the server. Please ensure the server is running.');
-    } finally {
-      setIsLoading(false);
+    if (result.success) {
+      navigate('/');
+    } else {
+      setError(result.error || 'Login failed. Please try again.');
     }
   };
 
