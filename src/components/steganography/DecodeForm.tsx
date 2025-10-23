@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Upload, X, Lock, FileText, Info, Image, Music, Video, QrCode, AlertCircle, CheckCircle, ExternalLink } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Upload, X, Lock, FileText, Info, Image, Music, Video, QrCode, AlertCircle, CheckCircle, ExternalLink, Eye, EyeOff } from 'lucide-react';
 import { extractEncryptedQR } from '../../utils/qrSteganography';
 import { decodeAudio } from '../../utils/audioSteganography';
 import { decodeMessage } from '../../utils/steganography';
@@ -18,7 +18,23 @@ const DecodeForm: React.FC = () => {
   const [websiteUrl, setWebsiteUrl] = useState<string | null>(null);
   const [decodeError, setDecodeError] = useState<string | null>(null);
   const [decodeSuccess, setDecodeSuccess] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Reset form state when component mounts (page reload/navigation)
+  useEffect(() => {
+    setSelectedType(null);
+    setFile(null);
+    setFileObject(null);
+    setPassword('');
+    setDecodedMessage(null);
+    setWebsiteUrl(null);
+    setDecodeError(null);
+    setDecodeSuccess(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, []);
 
   const stegTypes = [
     { id: 'image', name: 'Image Steganography', icon: Image, accept: 'image/*' },
@@ -256,6 +272,15 @@ const DecodeForm: React.FC = () => {
             <Upload size={40} className="mx-auto text-gray-400 mb-4" />
             <p className="text-gray-300 mb-2">Drag & drop a file here or click to browse</p>
             <p className="text-gray-500 text-sm">Upload a {selectedType} file that contains a hidden message</p>
+            {selectedType === 'audio' && (
+              <p className="text-yellow-400 text-xs mt-2">⚠️ Only WAV files are supported for audio steganography</p>
+            )}
+            {selectedType === 'video' && (
+              <p className="text-yellow-400 text-xs mt-2">⚠️ Only MP4 files are supported for video steganography</p>
+            )}
+            {selectedType === 'image' && (
+              <p className="text-yellow-400 text-xs mt-2">⚠️ Only PNG, JPG/JPEG, BMP, and WebP formats are supported for image steganography</p>
+            )}
           </div>
         ) : (
           <div className="relative rounded-lg overflow-hidden">
@@ -331,7 +356,20 @@ const DecodeForm: React.FC = () => {
             <button
               key={type.id}
               type="button"
-              onClick={() => setSelectedType(type.id as StegType)}
+              onClick={() => {
+                setSelectedType(type.id as StegType);
+                // Reset form state when switching steganography types
+                setFile(null);
+                setFileObject(null);
+                setPassword('');
+                setDecodedMessage(null);
+                setWebsiteUrl(null);
+                setDecodeError(null);
+                setDecodeSuccess(null);
+                if (fileInputRef.current) {
+                  fileInputRef.current.value = '';
+                }
+              }}
               className={`p-4 rounded-lg border transition duration-300 ${
                 selectedType === type.id
                   ? 'bg-purple-900/50 border-purple-500 text-white'
@@ -353,13 +391,21 @@ const DecodeForm: React.FC = () => {
                 <Lock size={18} className="text-gray-500" />
               </div>
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="block w-full pl-10 pr-3 py-3 border border-gray-600 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition duration-200"
-                placeholder="Enter decryption password"
+                className="block w-full pl-10 pr-12 py-3 border border-gray-600 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition duration-200"
+                placeholder="Enter decryption password (accepts numbers, letters, special characters)"
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-300 transition duration-200"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
               <p className="mt-1 text-sm text-gray-500 flex items-center">
                 <Info size={14} className="mr-1" />
                 Enter the password that was used to encrypt the message
@@ -485,8 +531,16 @@ const DecodeForm: React.FC = () => {
                   </button>
                   <button
                     onClick={() => {
-                      // Trigger file input click to select a new file
-                      fileInputRef.current?.click();
+                      setFile(null);
+                      setFileObject(null);
+                      setPassword('');
+                      setDecodedMessage(null);
+                      setWebsiteUrl(null);
+                      setDecodeError(null);
+                      setDecodeSuccess(null);
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = '';
+                      }
                     }}
                     className="px-4 py-2 bg-purple-700 hover:bg-purple-600 text-white rounded-md transition duration-200 flex items-center justify-center"
                   >
@@ -550,8 +604,16 @@ const DecodeForm: React.FC = () => {
                   </button>
                   <button
                     onClick={() => {
-                      // Trigger file input click to select a new file
-                      fileInputRef.current?.click();
+                      setFile(null);
+                      setFileObject(null);
+                      setPassword('');
+                      setDecodedMessage(null);
+                      setWebsiteUrl(null);
+                      setDecodeError(null);
+                      setDecodeSuccess(null);
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = '';
+                      }
                     }}
                     className="px-4 py-2 bg-purple-700 hover:bg-purple-600 text-white rounded-md transition duration-200 flex items-center justify-center"
                   >
@@ -615,8 +677,16 @@ const DecodeForm: React.FC = () => {
                   </button>
                   <button
                     onClick={() => {
-                      // Trigger file input click to select a new file
-                      fileInputRef.current?.click();
+                      setFile(null);
+                      setFileObject(null);
+                      setPassword('');
+                      setDecodedMessage(null);
+                      setWebsiteUrl(null);
+                      setDecodeError(null);
+                      setDecodeSuccess(null);
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = '';
+                      }
                     }}
                     className="px-4 py-2 bg-purple-700 hover:bg-purple-600 text-white rounded-md transition duration-200 flex items-center justify-center"
                   >

@@ -1,0 +1,3 @@
+in this project, the db works, home , encode, decode function. 
+- reloads
+- rename done

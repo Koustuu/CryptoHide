@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Upload, X, Lock, Info, Save, Image, Music, Video, QrCode, AlertCircle, CheckCircle } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Upload, X, Lock, Info, Save, Image, Music, Video, QrCode, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { createEncryptedQR, downloadQRCode, isValidUrl } from '../../utils/qrSteganography';
 import { encodeAudio } from '../../utils/audioSteganography';
 import { encodeMessage, imageDataToDataURL } from '../../utils/steganography';
@@ -19,7 +19,28 @@ const EncodeForm: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [qrError, setQrError] = useState<string | null>(null);
   const [qrSuccess, setQrSuccess] = useState<string | null>(null);
+  const [showFilenameModal, setShowFilenameModal] = useState(false);
+  const [modalFilename, setModalFilename] = useState('');
+  const [modalDefaultFilename, setModalDefaultFilename] = useState('');
+  const [onFilenameConfirm, setOnFilenameConfirm] = useState<((filename: string) => void) | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Reset form state when component mounts (page reload/navigation)
+  useEffect(() => {
+    setSelectedType(null);
+    setFile(null);
+    setFileObject(null);
+    setMessage('');
+    setPassword('');
+    setRedirectUrl('');
+    setQrCodeData(null);
+    setQrError(null);
+    setQrSuccess(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, []);
 
   const stegTypes = [
     { id: 'image', name: 'Image Steganography', icon: Image, accept: 'image/*' },
@@ -75,6 +96,26 @@ const EncodeForm: React.FC = () => {
     }
   };
 
+  const openFilenameModal = (defaultName: string, onConfirm: (filename: string) => void) => {
+    setModalDefaultFilename(defaultName);
+    setModalFilename(defaultName);
+    setOnFilenameConfirm(() => onConfirm);
+    setShowFilenameModal(true);
+  };
+
+  const handleFilenameConfirm = () => {
+    if (onFilenameConfirm) {
+      onFilenameConfirm(modalFilename.trim() || modalDefaultFilename);
+    }
+    setShowFilenameModal(false);
+    setOnFilenameConfirm(null);
+  };
+
+  const handleFilenameCancel = () => {
+    setShowFilenameModal(false);
+    setOnFilenameConfirm(null);
+  };
+
   const generateEncryptedQRCode = async () => {
     if (!message || !redirectUrl || !password) return;
 
@@ -125,21 +166,28 @@ const EncodeForm: React.FC = () => {
         console.log('UI: Calling encodeAudio');
         const encodedBlob = await encodeAudio(fileObject, message, password);
         console.log('UI: Encoded blob received, size:', encodedBlob.size);
-        const url = URL.createObjectURL(encodedBlob);
-        console.log('UI: Object URL created:', url);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'stego_audio.wav';
-        document.body.appendChild(a);
-        console.log('UI: About to trigger download');
-        a.click();
-        console.log('UI: Download triggered');
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        setQrSuccess('Audio encoded successfully! File downloaded.');
+
+        // Prompt user for custom filename using modal
+        const defaultName = 'stego_audio.wav';
+        openFilenameModal(defaultName, (filename: string) => {
+          const url = URL.createObjectURL(encodedBlob);
+          console.log('UI: Object URL created:', url);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          console.log('UI: About to trigger download');
+          a.click();
+          console.log('UI: Download triggered');
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          setQrSuccess(`Audio encoded successfully! File downloaded as "${filename}".`);
+          setIsProcessing(false);
+        });
       } catch (error: any) {
         console.error('UI: Encoding failed:', error);
         setQrError(error.message || 'Failed to encode message into audio.');
+        setIsProcessing(false);
       }
     } else if (selectedType === 'image' && fileObject) {
       try {
@@ -154,19 +202,26 @@ const EncodeForm: React.FC = () => {
         }
         // Convert encoded ImageData to Blob
         const blob = await imageDataToBlob(encodedImageData as ImageData);
-        // Create download link
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'encoded_image.png';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        setQrSuccess('Image encoded successfully! File downloaded.');
+
+        // Prompt user for custom filename using modal
+        const defaultName = 'encoded_image.png';
+        openFilenameModal(defaultName, (filename: string) => {
+          // Create download link
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          setQrSuccess(`Image encoded successfully! File downloaded as "${filename}".`);
+          setIsProcessing(false);
+        });
       } catch (error: any) {
         console.error('UI: Encoding failed:', error);
         setQrError(error.message || 'Failed to encode message into image.');
+        setIsProcessing(false);
       }
     } else if (selectedType === 'video' && fileObject) {
       try {
@@ -177,19 +232,26 @@ const EncodeForm: React.FC = () => {
           setIsProcessing(false);
           return;
         }
-        // Create download link
-        const url = URL.createObjectURL(encodedVideoBlob as Blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `encoded_${fileObject.name}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        setQrSuccess('Video encoded successfully! File downloaded. The video length is unchanged.');
+
+        // Prompt user for custom filename using modal
+        const defaultName = `encoded_${fileObject.name}`;
+        openFilenameModal(defaultName, (filename: string) => {
+          // Create download link
+          const url = URL.createObjectURL(encodedVideoBlob as Blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          setQrSuccess(`Video encoded successfully! File downloaded as "${filename}". The video length is unchanged.`);
+          setIsProcessing(false);
+        });
       } catch (error: any) {
         console.error('UI: Encoding failed:', error);
         setQrError(error.message || 'Failed to encode message into video.');
+        setIsProcessing(false);
       }
     } else {
       // Handle other steganography types
@@ -234,6 +296,15 @@ const EncodeForm: React.FC = () => {
             <Upload size={40} className="mx-auto text-gray-400 mb-4" />
             <p className="text-gray-300 mb-2">Drag & drop a file here or click to browse</p>
             <p className="text-gray-500 text-sm">Select a {selectedType} file to hide your message</p>
+            {selectedType === 'audio' && (
+              <p className="text-yellow-400 text-xs mt-2">⚠️ Only WAV files are supported for audio steganography</p>
+            )}
+            {selectedType === 'video' && (
+              <p className="text-yellow-400 text-xs mt-2">⚠️ Only MP4 files are supported for video steganography</p>
+            )}
+            {selectedType === 'image' && (
+              <p className="text-yellow-400 text-xs mt-2">⚠️ Only PNG, JPG/JPEG, BMP, and WebP formats are supported for image steganography</p>
+            )}
           </div>
         ) : (
           <div className="relative rounded-lg overflow-hidden">
@@ -283,7 +354,21 @@ const EncodeForm: React.FC = () => {
             <button
               key={type.id}
               type="button"
-              onClick={() => setSelectedType(type.id as StegType)}
+              onClick={() => {
+                setSelectedType(type.id as StegType);
+                // Reset form state when switching steganography types
+                setFile(null);
+                setFileObject(null);
+                setMessage('');
+                setPassword('');
+                setRedirectUrl('');
+                setQrCodeData(null);
+                setQrError(null);
+                setQrSuccess(null);
+                if (fileInputRef.current) {
+                  fileInputRef.current.value = '';
+                }
+              }}
               className={`p-4 rounded-lg border transition duration-300 ${
                 selectedType === type.id
                   ? 'bg-purple-900/50 border-purple-500 text-white'
@@ -350,13 +435,21 @@ const EncodeForm: React.FC = () => {
                 <Lock size={18} className="text-gray-500" />
               </div>
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="block w-full pl-10 pr-3 py-3 border border-gray-600 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition duration-200"
-                placeholder="Enter password for encryption"
+                className="block w-full pl-10 pr-12 py-3 border border-gray-600 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition duration-200"
+                placeholder="Enter password for encryption (accepts numbers, letters, special characters)"
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-300 transition duration-200"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
               <p className="mt-1 text-sm text-gray-500 flex items-center">
                 <Info size={14} className="mr-1" />
                 This password will be required to decode the message
@@ -430,7 +523,12 @@ const EncodeForm: React.FC = () => {
             </div>
             <div className="flex space-x-3">
               <button
-                onClick={() => downloadQRCode(qrCodeData, 'encrypted-qr-code.png')}
+                onClick={() => {
+                  const defaultName = 'encrypted-qr-code.png';
+                  openFilenameModal(defaultName, (filename: string) => {
+                    downloadQRCode(qrCodeData, filename);
+                  });
+                }}
                 className="px-4 py-2 bg-purple-700 hover:bg-purple-600 text-white rounded-md transition duration-200 flex items-center"
               >
                 <Save size={16} className="mr-2" />
@@ -445,6 +543,36 @@ const EncodeForm: React.FC = () => {
                 className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition duration-200"
               >
                 Generate New
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Filename Modal */}
+      {showFilenameModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 border border-gray-600 rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-white mb-4">Enter Filename</h3>
+            <input
+              type="text"
+              value={modalFilename}
+              onChange={(e) => setModalFilename(e.target.value)}
+              className="block w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition duration-200"
+              placeholder="Enter filename..."
+            />
+            <div className="flex space-x-3 mt-4">
+              <button
+                onClick={handleFilenameConfirm}
+                className="flex-1 px-4 py-2 bg-purple-700 hover:bg-purple-600 text-white rounded-md transition duration-200"
+              >
+                Confirm
+              </button>
+              <button
+                onClick={handleFilenameCancel}
+                className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition duration-200"
+              >
+                Cancel
               </button>
             </div>
           </div>

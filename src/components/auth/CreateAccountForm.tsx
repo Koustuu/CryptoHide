@@ -553,6 +553,8 @@ const CreateAccountForm: React.FC = () => {
                 ? '⚠️ Please enter a password'
                 : !formData.confirmPassword.trim()
                 ? '⚠️ Please confirm your password'
+                : formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword
+                ? '⚠️ Passwords do not match'
                 : !formData.termsAccepted
                 ? '⚠️ Please accept the terms and conditions'
                 : '⚠️ Please complete all required fields'

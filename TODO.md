@@ -1,2 +1,3 @@
-- [x] Modify encodeAudio in audioSteganography.ts to prepend "STEG" to message before encryption
-- [x] Modify decodeAudio in audioSteganography.ts to validate decrypted message starts with "STEG" and throw error if not, then return the message without prefix
+- [ ] Update src/components/steganography/DecodeForm.tsx: Add useEffect to reset all state variables and clear file input on mount
+- [ ] Update src/components/steganography/EncodeForm.tsx: Add useEffect to reset all state variables and clear file input on mount
+- [ ] Test the changes by navigating between pages and reloading to ensure forms reset properly
