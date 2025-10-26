@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
-import QRDebugPanel from './components/debug/QRDebugPanel';
+
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -11,6 +11,7 @@ import CreateAccountPage from './pages/CreateAccountPage';
 import EncodePage from './pages/EncodePage';
 import DecodePage from './pages/DecodePage';
 import AboutPage from './pages/AboutPage';
+import TermsAndPrivacyPage from './pages/TermsAndPrivacyPage';
 
 function App() {
   return (
@@ -31,8 +32,8 @@ function App() {
             </ProtectedRoute>
           } />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/terms-privacy" element={<TermsAndPrivacyPage />} />
         </Routes>
-        <QRDebugPanel />
       </Router>
     </AuthProvider>
   );

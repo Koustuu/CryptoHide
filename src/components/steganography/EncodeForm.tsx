@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, X, Lock, Info, Save, Image, Music, Video, QrCode, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { Upload, X, Lock, Info, Save, Image, Music, Video, QrCode, AlertCircle, CheckCircle, Eye, EyeOff, FileText } from 'lucide-react';
 import { createEncryptedQR, downloadQRCode, isValidUrl } from '../../utils/qrSteganography';
 import { encodeAudio } from '../../utils/audioSteganography';
 import { encodeMessage, imageDataToDataURL } from '../../utils/steganography';
@@ -78,6 +78,13 @@ const EncodeForm: React.FC = () => {
     reader.onload = () => {
       setFile(reader.result as string);
       setFileObject(file);
+
+      // Validate file type for audio steganography
+      if (selectedType === 'audio' && !file.name.toLowerCase().endsWith('.wav')) {
+        setQrError('Please select a WAV audio file for encoding.');
+      } else {
+        setQrError(null); // Clear error if valid or not audio
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -473,6 +480,65 @@ const EncodeForm: React.FC = () => {
                   <CheckCircle size={18} className="text-green-300 mr-2" />
                   <p className="text-green-300 text-sm">{qrSuccess}</p>
                 </div>
+              </div>
+            )}
+
+            {/* Action buttons after encoding */}
+            {qrSuccess && selectedType !== 'qrcode' && (
+              <div className="mt-6 pt-4 border-t border-purple-700/50">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={() => {
+                      // Clear only the results, keep the file and inputs
+                      setQrError(null);
+                      setQrSuccess(null);
+                    }}
+                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition duration-200 flex items-center justify-center"
+                  >
+                    <FileText size={16} className="mr-2" />
+                    Encode Again
+                  </button>
+                  <button
+                    onClick={() => {
+                      setFile(null);
+                      setFileObject(null);
+                      setMessage('');
+                      setPassword('');
+                      setQrError(null);
+                      setQrSuccess(null);
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = '';
+                      }
+                    }}
+                    className="px-4 py-2 bg-purple-700 hover:bg-purple-600 text-white rounded-md transition duration-200 flex items-center justify-center"
+                  >
+                    <Upload size={16} className="mr-2" />
+                    Upload Another File
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedType(null);
+                      setFile(null);
+                      setFileObject(null);
+                      setMessage('');
+                      setPassword('');
+                      setRedirectUrl('');
+                      setQrCodeData(null);
+                      setQrError(null);
+                      setQrSuccess(null);
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = '';
+                      }
+                    }}
+                    className="px-4 py-2 bg-red-700 hover:bg-red-600 text-white rounded-md transition duration-200 flex items-center justify-center"
+                  >
+                    <X size={16} className="mr-2" />
+                    Clear All
+                  </button>
+                </div>
+                <p className="text-gray-400 text-xs mt-2">
+                  💡 Your uploaded file remains visible above for reference
+                </p>
               </div>
             )}
 

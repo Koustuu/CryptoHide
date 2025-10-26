@@ -1,3 +1,5 @@
-- [ ] Update src/components/steganography/DecodeForm.tsx: Add useEffect to reset all state variables and clear file input on mount
-- [ ] Update src/components/steganography/EncodeForm.tsx: Add useEffect to reset all state variables and clear file input on mount
-- [ ] Test the changes by navigating between pages and reloading to ensure forms reset properly
+# TODO List for Updating CryptoHide Section
+
+- [x] Edit src/components/home/Hero.tsx to change "images" to "media" in the description text
+- [x] Edit src/components/layout/Footer.tsx to change "images" to "media" in the description text
+- [x] Rearrange footer columns to place Quick Links on the right side

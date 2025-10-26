@@ -27,7 +27,7 @@ const EncodePage: React.FC = () => {
             <ul className="space-y-3 text-gray-300">
               <li className="flex">
                 <div className="flex-shrink-0 text-purple-400 mr-2">•</div>
-                <span>Use high-resolution images as they can store more information.</span>
+                <span>Use high-resolution media as they can store more information.</span>
               </li>
               <li className="flex">
                 <div className="flex-shrink-0 text-purple-400 mr-2">•</div>
@@ -39,7 +39,7 @@ const EncodePage: React.FC = () => {
               </li>
               <li className="flex">
                 <div className="flex-shrink-0 text-purple-400 mr-2">•</div>
-                <span>Avoid compressing the resulting image as it can damage the hidden data.</span>
+                <span>Avoid compressing the resulting media as it can damage the hidden data.</span>
               </li>
             </ul>
           </div>

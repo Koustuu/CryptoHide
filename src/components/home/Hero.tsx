@@ -34,7 +34,7 @@ const Hero: React.FC = () => {
             </h1>
             
             <p className="text-xl text-gray-300 mb-8">
-              Hide your confidential information within ordinary images. 
+              Hide your confidential information within ordinary media.
               Our advanced steganography tool keeps your secrets safe from prying eyes.
             </p>
             
@@ -52,7 +52,7 @@ const Hero: React.FC = () => {
                 className="px-8 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-medium transition duration-300 border border-purple-500 flex items-center justify-center"
               >
                 <Shield size={20} className="mr-2" />
-                Decode Image
+                Decode Media
               </button>
             </div>
           </div>
@@ -76,7 +76,7 @@ const Hero: React.FC = () => {
                     'Military-grade encryption',
                     'No data stored on our servers',
                     'Multiple steganography algorithms',
-                    'Works with JPG, PNG & WebP images'
+                    'Works with images, audio, video and QR code, '
                   ].map((feature, index) => (
                     <li key={index} className="flex items-center text-gray-300">
                       <div className="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>

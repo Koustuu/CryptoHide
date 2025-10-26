@@ -633,7 +633,7 @@ const DecodeForm: React.FC = () => {
                 </p>
               </div>
             </>
-          ) : (
+          ) : selectedType === 'audio' ? (
             <>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-white flex items-center">
@@ -706,7 +706,80 @@ const DecodeForm: React.FC = () => {
                 </p>
               </div>
             </>
-          )}
+          ) : selectedType === 'video' ? (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white flex items-center">
+                  <Video size={20} className="mr-2 text-purple-400" />
+                  Decoded Video Steganography Results
+                </h3>
+                {fileObject && (
+                  <div className="text-sm text-gray-400">
+                    From: {fileObject.name}
+                  </div>
+                )}
+              </div>
+
+              {decodedMessage && (
+                <div>
+                  <h4 className="text-md font-medium text-white mb-2 flex items-center">
+                    <FileText size={16} className="mr-2 text-green-400" />
+                    Hidden Message
+                  </h4>
+                  <div className="bg-gray-900 p-4 rounded-md text-gray-300 whitespace-pre-wrap break-words border-l-4 border-green-500">
+                    {decodedMessage}
+                  </div>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="mt-6 pt-4 border-t border-purple-700/50">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={() => {
+                      // Clear only the results, keep the file
+                      setDecodedMessage(null);
+                      setWebsiteUrl(null);
+                      setDecodeError(null);
+                      setDecodeSuccess(null);
+                    }}
+                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition duration-200 flex items-center justify-center"
+                  >
+                    <FileText size={16} className="mr-2" />
+                    Decode Again
+                  </button>
+                  <button
+                    onClick={() => {
+                      setFile(null);
+                      setFileObject(null);
+                      setPassword('');
+                      setDecodedMessage(null);
+                      setWebsiteUrl(null);
+                      setDecodeError(null);
+                      setDecodeSuccess(null);
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = '';
+                      }
+                    }}
+                    className="px-4 py-2 bg-purple-700 hover:bg-purple-600 text-white rounded-md transition duration-200 flex items-center justify-center"
+                  >
+                    <Upload size={16} className="mr-2" />
+                    Upload Different Video File
+                  </button>
+                  <button
+                    onClick={handleRemoveFile}
+                    className="px-4 py-2 bg-red-700 hover:bg-red-600 text-white rounded-md transition duration-200 flex items-center justify-center"
+                  >
+                    <X size={16} className="mr-2" />
+                    Clear All
+                  </button>
+                </div>
+                <p className="text-gray-400 text-xs mt-2">
+                  💡 Your uploaded video file remains visible above for reference
+                </p>
+              </div>
+            </>
+          ) : null}
         </div>
       )}
     </div>

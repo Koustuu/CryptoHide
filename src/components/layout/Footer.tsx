@@ -25,7 +25,7 @@ const Footer: React.FC = () => {
               <Shield size={18} className="mr-2" /> CryptoHide
             </h3>
             <p className="text-gray-400 mb-4">
-              Secure steganography tool for hiding messages within images.
+              Secure steganography tool for hiding messages within media.
               Protect your private communications with state-of-the-art encryption.
             </p>
             <div className="flex space-x-4">
@@ -39,6 +39,20 @@ const Footer: React.FC = () => {
             </div>
           </div>
           
+          <div>
+            <h3 className="text-lg font-semibold mb-4 text-yellow-300 flex items-center">
+              <Key size={18} className="mr-2" /> Security
+            </h3>
+            <ul className="space-y-2">
+              <li>
+                <a href="/terms-privacy" className="text-gray-400 hover:text-yellow-300 transition duration-300">Terms and Conditions & Privacy Policy</a>
+              </li>
+              <li>
+                <a href="/security" className="text-gray-400 hover:text-yellow-300 transition duration-300"></a>
+              </li>
+            </ul>
+          </div>
+
           <div>
             <h3 className="text-lg font-semibold mb-4 text-yellow-300">Quick Links</h3>
             <ul className="space-y-2">
@@ -65,23 +79,6 @@ const Footer: React.FC = () => {
               </li>
               <li>
                 <a href="/about" className="text-gray-400 hover:text-yellow-300 transition duration-300">About</a>
-              </li>
-            </ul>
-          </div>
-          
-          <div>
-            <h3 className="text-lg font-semibold mb-4 text-yellow-300 flex items-center">
-              <Key size={18} className="mr-2" /> Security
-            </h3>
-            <ul className="space-y-2">
-              <li>
-                <a href="/privacy" className="text-gray-400 hover:text-yellow-300 transition duration-300">Privacy Policy</a>
-              </li>
-              <li>
-                <a href="/terms" className="text-gray-400 hover:text-yellow-300 transition duration-300">Terms of Service</a>
-              </li>
-              <li>
-                <a href="/security" className="text-gray-400 hover:text-yellow-300 transition duration-300">Security</a>
               </li>
             </ul>
           </div>

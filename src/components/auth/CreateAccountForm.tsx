@@ -502,13 +502,11 @@ const CreateAccountForm: React.FC = () => {
             <div className="ml-3 text-sm">
               <label htmlFor="terms" className="text-gray-300">
                 I agree to the{' '}
-                <Link to="/terms" className="text-purple-400 hover:text-purple-300 underline">
-                  Terms and Conditions
+                <Link to="/terms-privacy" className="text-purple-400 hover:text-purple-300 underline">
+                  Terms and Conditions & Privacy Policy
                 </Link>{' '}
-                and{' '}
-                <Link to="/privacy" className="text-purple-400 hover:text-purple-300 underline">
-                  Privacy Policy
-                </Link>
+               
+                
               </label>
             </div>
           </div>

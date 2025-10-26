@@ -71,14 +71,7 @@ const AboutPage: React.FC = () => {
                   <div className="flex-shrink-0 text-purple-400 mr-2">•</div>
                   <span><strong>LSB (Least Significant Bit):</strong> Embeds data in the least significant bits of pixel values</span>
                 </li>
-                <li className="flex">
-                  <div className="flex-shrink-0 text-purple-400 mr-2">•</div>
-                  <span><strong>DCT (Discrete Cosine Transform):</strong> Modifies frequency coefficients in JPEG images</span>
-                </li>
-                <li className="flex">
-                  <div className="flex-shrink-0 text-purple-400 mr-2">•</div>
-                  <span><strong>DWT (Discrete Wavelet Transform):</strong> Utilizes wavelet transformations for robust hiding</span>
-                </li>
+                
               </ul>
               
               <p className="text-gray-300 mt-4">
@@ -101,7 +94,7 @@ const AboutPage: React.FC = () => {
               <ul className="space-y-2 text-gray-300">
                 <li className="flex">
                   <div className="flex-shrink-0 text-purple-400 mr-2">•</div>
-                  <span>No storage of your images or messages on our servers</span>
+                  <span>No storage of your media or messages on our servers</span>
                 </li>
                 <li className="flex">
                   <div className="flex-shrink-0 text-purple-400 mr-2">•</div>
@@ -134,11 +127,10 @@ const AboutPage: React.FC = () => {
                   Encoding Messages
                 </h3>
                 <ol className="space-y-2 text-gray-300 list-decimal list-inside ml-4">
-                  <li>Upload an image to serve as your carrier file</li>
+                  <li>Upload an media to serve as your carrier file</li>
                   <li>Enter the secret message you want to hide</li>
-                  <li>Optionally add a password for extra security</li>
-                  <li>Select your preferred steganography algorithm</li>
-                  <li>Download the resulting image with your hidden message</li>
+                  <li>Optionally add a password for extra security</li>                  
+                  <li>Download the resulting media with your hidden message</li>
                 </ol>
               </div>
               
@@ -148,10 +140,10 @@ const AboutPage: React.FC = () => {
                   Decoding Messages
                 </h3>
                 <ol className="space-y-2 text-gray-300 list-decimal list-inside ml-4">
-                  <li>Upload an image that contains a hidden message</li>
+                  <li>Upload a media that contains a hidden message</li>
                   <li>Enter the password if one was used during encoding</li>
                   <li>Click "Reveal Hidden Message" to extract the concealed information</li>
-                  <li>View and copy the extracted message</li>
+                  <li>View the extracted message</li>
                 </ol>
               </div>
             </div>

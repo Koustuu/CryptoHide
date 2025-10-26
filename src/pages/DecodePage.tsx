@@ -26,7 +26,7 @@ const DecodePage: React.FC = () => {
             <div className="bg-gray-800 border border-indigo-900 rounded-lg shadow-lg p-6">
               <h2 className="text-xl font-semibold text-white mb-4">How Steganography Works</h2>
               <p className="text-gray-300">
-                Steganography works by modifying parts of the image data that are less noticeable to the human eye. 
+                Steganography works by modifying parts of the media data that are less noticeable to the human eye. 
                 This allows information to be hidden within the image while maintaining its visual appearance. 
                 Different algorithms use various techniques to achieve this, from simple least significant bit 
                 manipulation to more complex transformations.

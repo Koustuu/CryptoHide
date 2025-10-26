@@ -5,8 +5,8 @@ const HowItWorks: React.FC = () => {
   const steps = [
     {
       icon: <Upload size={28} className="text-purple-400" />,
-      title: 'Upload an Image',
-      description: 'Select any JPG, PNG, or WebP image from your device to use as a carrier for your hidden message.'
+      title: 'Upload an Media',
+      description: 'Select any compatible media from your device to use as a carrier for your hidden message.'
     },
     {
       icon: <MessageSquare size={28} className="text-indigo-400" />,
@@ -33,7 +33,7 @@ const HowItWorks: React.FC = () => {
             How It Works
           </h2>
           <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-            Hiding your information in images is simple and secure with our easy-to-use process
+            Hiding your information in media is simple and secure with our easy-to-use process
           </p>
         </div>
         
