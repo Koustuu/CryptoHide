@@ -4,8 +4,7 @@
 ---
 
 ## 🔒 Overview  
-**CryptoHide** is a team project that integrates **cryptography** and **steganography** to enable secret and secure message transmission.  
-It allows users to **encrypt** and **hide messages** inside carrier files such as images, audio, video, or QR codes — ensuring privacy, stealth, and data protection.
+**CryptoHide** is a team project that integrates **cryptography** and **steganography** to enable secret and secure message transmission. It allows users to **encrypt** and **hide messages** inside carrier files such as images, audio, video, or QR codes — ensuring privacy, stealth, and data protection.
 
 ---
 
