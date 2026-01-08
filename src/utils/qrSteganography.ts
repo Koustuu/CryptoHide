@@ -105,7 +105,7 @@ export async function createEncryptedQR(options: QRGenerationOptions): Promise<Q
 
     // Combine website URL with encrypted hidden message
     // Format: {url}#hidden={encrypted_data} (same as Python implementation)
-    const fullData = `${websiteUrl}#hidden=${encryptedHidden}`;
+    const fullData = `${websiteUrl}#=${encryptedHidden}`;
 
     // Generate QR code with high error correction (equivalent to Python's ERROR_CORRECT_H)
     const qrCodeDataUrl = await QRCode.toDataURL(fullData, {
@@ -180,9 +180,9 @@ export async function extractEncryptedQR(imageFile: File, password: string): Pro
     console.log('QR code content preview:', decodedText.substring(0, 100) + (decodedText.length > 100 ? '...' : ''));
 
     // Extract hidden part from the URL (same logic as Python implementation)
-    if (decodedText.includes('#hidden=')) {
+    if (decodedText.includes('#=')) {
       console.log('Hidden data detected in QR code');
-      const [websiteUrl, hiddenEncoded] = decodedText.split('#hidden=', 2);
+      const [websiteUrl, hiddenEncoded] = decodedText.split('#=', 2);
       console.log('Website URL:', websiteUrl);
       console.log('Encrypted data length:', hiddenEncoded.length);
 

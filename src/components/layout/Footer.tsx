@@ -1,21 +1,8 @@
 import React from 'react';
 import { Shield, Key, Github as GitHub } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { Link } from 'react-router-dom';
 
 const Footer: React.FC = () => {
-  const { isAuthenticated, setIntendedRoute } = useAuth();
-  const navigate = useNavigate();
-
-  const handleSteganographyClick = (e: React.MouseEvent, route: string) => {
-    e.preventDefault();
-    if (isAuthenticated) {
-      navigate(route);
-    } else {
-      setIntendedRoute(route);
-      navigate(route); // This will trigger the ProtectedRoute and show auth modal
-    }
-  };
   return (
     <footer className="bg-indigo-950 text-gray-300">
       <div className="container mx-auto px-4 py-8">

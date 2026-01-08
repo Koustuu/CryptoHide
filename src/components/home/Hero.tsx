@@ -1,20 +1,9 @@
 import React from 'react';
 import { Lock, Shield, Eye } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
 
 const Hero: React.FC = () => {
-  const { isAuthenticated, setIntendedRoute } = useAuth();
   const navigate = useNavigate();
-
-  const handleSteganographyClick = (route: string) => {
-    if (isAuthenticated) {
-      navigate(route);
-    } else {
-      setIntendedRoute(route);
-      navigate(route); // This will trigger the ProtectedRoute and show auth modal
-    }
-  };
   return (
     <section className="relative py-16 md:py-24 overflow-hidden">
       {/* Background gradient */}
@@ -40,7 +29,7 @@ const Hero: React.FC = () => {
             
             <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
               <button
-                onClick={() => handleSteganographyClick('/encode')}
+                onClick={() => navigate('/encode')}
                 className="px-8 py-3 bg-purple-700 hover:bg-purple-600 text-white rounded-lg font-medium transition duration-300 transform hover:scale-105 flex items-center justify-center"
               >
                 <Eye size={20} className="mr-2" />
@@ -48,7 +37,7 @@ const Hero: React.FC = () => {
               </button>
 
               <button
-                onClick={() => handleSteganographyClick('/decode')}
+                onClick={() => navigate('/decode')}
                 className="px-8 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-medium transition duration-300 border border-purple-500 flex items-center justify-center"
               >
                 <Shield size={20} className="mr-2" />

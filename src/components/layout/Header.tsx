@@ -1,18 +1,9 @@
 import React, { useState } from 'react';
-import { Menu, X, Lock, Eye, EyeOff, LogIn, LogOut, User } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { Menu, X, Lock, Eye, EyeOff } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { isAuthenticated, user, logout } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-    setIsMenuOpen(false);
-  };
 
   return (
     <header className="bg-indigo-950 text-white shadow-md fixed w-full z-50">
@@ -58,29 +49,7 @@ const Header: React.FC = () => {
         </div>
         
         <div>
-          {isAuthenticated ? (
-            <div className="flex items-center space-x-4">
-              <div className="hidden sm:flex items-center text-gray-300">
-                <User size={16} className="mr-2" />
-                <span className="text-sm">{user?.email}</span>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="flex items-center px-4 py-2 rounded-md bg-red-800 hover:bg-red-700 transition duration-300 shadow-sm text-white"
-              >
-                <LogOut size={16} className="mr-2" />
-                <span>Logout</span>
-              </button>
-            </div>
-          ) : (
-            <Link
-              to="/login"
-              className="flex items-center px-4 py-2 rounded-md bg-purple-800 hover:bg-purple-700 transition duration-300 shadow-sm"
-            >
-              <LogIn size={16} className="mr-2" />
-              <span>Login</span>
-            </Link>
-          )}
+          {/* No authentication UI needed */}
         </div>
       </div>
       
@@ -126,33 +95,7 @@ const Header: React.FC = () => {
                 </Link>
               </li>
 
-              {/* Authentication section for mobile */}
-              <li className="pt-4 border-t border-indigo-800">
-                {isAuthenticated ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center text-gray-300 py-2">
-                      <User size={16} className="mr-2" />
-                      <span className="text-sm">{user?.email}</span>
-                    </div>
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center text-red-300 hover:text-red-200 transition duration-300 py-2"
-                    >
-                      <LogOut size={16} className="mr-2" />
-                      Logout
-                    </button>
-                  </div>
-                ) : (
-                  <Link
-                    to="/login"
-                    className="flex items-center text-purple-300 hover:text-purple-200 transition duration-300 py-2"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <LogIn size={16} className="mr-2" />
-                    Login
-                  </Link>
-                )}
-              </li>
+              {/* No authentication section needed */}
             </ul>
           </nav>
         </div>
