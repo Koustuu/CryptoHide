@@ -58,6 +58,45 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+// API Routes for One-Time View System
+app.post('/api/check-hash', async (req, res) => {
+  try {
+    const { file_hash } = req.body;
+    if (!file_hash) {
+      return res.status(400).json({ error: 'File hash is required' });
+    }
+
+    const existingFile = await DecodedFile.findOne({ file_hash });
+    const exists = !!existingFile;
+
+    res.status(200).json({ exists });
+  } catch (err) {
+    console.error('Error checking hash:', err);
+    res.status(500).json({ error: 'Server error checking hash' });
+  }
+});
+
+app.post('/api/store-hash', async (req, res) => {
+  try {
+    const { file_hash } = req.body;
+    if (!file_hash) {
+      return res.status(400).json({ error: 'File hash is required' });
+    }
+
+    const newDecodedFile = new DecodedFile({ file_hash });
+    await newDecodedFile.save();
+
+    res.status(201).json({ message: 'Hash stored successfully' });
+  } catch (err) {
+    if (err.code === 11000) { // Duplicate key error
+      res.status(200).json({ message: 'Hash already exists' });
+    } else {
+      console.error('Error storing hash:', err);
+      res.status(500).json({ error: 'Server error storing hash' });
+    }
+  }
+});
+
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);

@@ -4,6 +4,7 @@ import { extractEncryptedQR } from '../../utils/qrSteganography';
 import { decodeAudio } from '../../utils/audioSteganography';
 import { decodeMessage } from '../../utils/steganography';
 import { fileToImageData } from '../../utils/imageSteganography';
+import { computeFileHash, checkFileHash, storeFileHash } from '../../utils/hashUtils';
 
 type StegType = 'image' | 'audio' | 'video' | 'qrcode';
 
@@ -19,6 +20,7 @@ const DecodeForm: React.FC = () => {
   const [decodeError, setDecodeError] = useState<string | null>(null);
   const [decodeSuccess, setDecodeSuccess] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [securityMessage, setSecurityMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Reset form state when component mounts (page reload/navigation)
@@ -35,6 +37,37 @@ const DecodeForm: React.FC = () => {
       fileInputRef.current.value = '';
     }
   }, []);
+
+  // Security feature: Destroy decoded messages on visibility change or blur
+  useEffect(() => {
+    const destroyMessage = (reason: string) => {
+      if (!decodedMessage && !websiteUrl && !decodeSuccess && !decodeError) return;
+
+      setDecodedMessage(null);
+      setWebsiteUrl(null);
+      setDecodeError(null);
+      setDecodeSuccess(null);
+      setSecurityMessage(`⚠️ Message destroyed: ${reason}`);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        destroyMessage('Tab switched or minimized');
+      }
+    };
+
+    const handleBlur = () => {
+      destroyMessage('App switch or screen lock');
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, [decodedMessage, websiteUrl, decodeSuccess, decodeError]);
 
   const stegTypes = [
     { id: 'image', name: 'Image Steganography', icon: Image, accept: 'image/*' },
@@ -122,7 +155,7 @@ const DecodeForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file || !password) {
+    if (!file || !password || !fileObject) {
       setDecodeError('Please select a file and enter a password');
       return;
     }
@@ -134,6 +167,14 @@ const DecodeForm: React.FC = () => {
     setWebsiteUrl(null);
 
     try {
+      // One-time view system: Check file hash before decoding
+      const fileHash = await computeFileHash(fileObject);
+      const hashExists = await checkFileHash(fileHash);
+      if (hashExists) {
+        setDecodeError('No hidden message found in this file.');
+        setIsProcessing(false);
+        return;
+      }
       if (selectedType === 'qrcode') {
         // Handle QR code decoding with encryption
         if (!fileObject) {
@@ -159,6 +200,8 @@ const DecodeForm: React.FC = () => {
 
           if (result.hiddenMessage) {
             setDecodeSuccess(`Successfully extracted hidden message from QR code! The QR code links to ${result.websiteUrl} and contains an encrypted message.`);
+            // Store hash for one-time view system
+            await storeFileHash(fileHash);
           } else {
             setDecodeSuccess(`QR code decoded successfully. This QR code links to ${result.websiteUrl} but contains no hidden message.`);
           }
@@ -174,6 +217,8 @@ const DecodeForm: React.FC = () => {
             setDecodedMessage(decodedMessage);
             setDecodeSuccess('Successfully extracted hidden message!');
             setDecodeError(null);
+            // Store hash for one-time view system
+            await storeFileHash(fileHash);
           } catch (error: any) {
             // Customize error message for wrong password
             if (error.message && error.message.toLowerCase().includes('incorrect password')) {
@@ -193,6 +238,8 @@ const DecodeForm: React.FC = () => {
               setDecodedMessage(decodedMessage);
               setDecodeSuccess('Successfully extracted hidden message!');
               setDecodeError(null);
+              // Store hash for one-time view system
+              await storeFileHash(fileHash);
             } else {
               setDecodeError('No hidden message found in the image.');
               setDecodeSuccess(null);
@@ -209,6 +256,8 @@ const DecodeForm: React.FC = () => {
               setDecodedMessage(decodedMessage);
               setDecodeSuccess('Successfully extracted hidden message from video!');
               setDecodeError(null);
+              // Store hash for one-time view system
+              await storeFileHash(fileHash);
             } else {
               setDecodeError('No hidden message found in the video file.');
               setDecodeSuccess(null);
@@ -366,6 +415,7 @@ const DecodeForm: React.FC = () => {
                 setWebsiteUrl(null);
                 setDecodeError(null);
                 setDecodeSuccess(null);
+                setSecurityMessage(null);
                 if (fileInputRef.current) {
                   fileInputRef.current.value = '';
                 }
@@ -428,6 +478,16 @@ const DecodeForm: React.FC = () => {
                 <div className="flex items-center">
                   <CheckCircle size={18} className="text-green-300 mr-2" />
                   <p className="text-green-300 text-sm">{decodeSuccess}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Security Message */}
+            {securityMessage && (
+              <div className="p-4 bg-orange-900 border border-orange-700 rounded-md">
+                <div className="flex items-center">
+                  <AlertCircle size={18} className="text-orange-300 mr-2" />
+                  <p className="text-orange-300 text-sm">{securityMessage}</p>
                 </div>
               </div>
             )}
